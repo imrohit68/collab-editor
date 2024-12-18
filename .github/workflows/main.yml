@@ -39,9 +39,11 @@ jobs:
           sudo docker rm collab-editor-container || true && \
           sudo docker rmi imrohit68/collab-editor:latest || true && \
           sudo docker run -d -p 8080:8080 --name collab-editor-container imrohit68/collab-editor:latest"
+
+      - name: Allow Write Permission for Cleanup
+        run: chmod u+w spark.pem
           
       - name: Clean Up SSH Key
-        if: always()
         run: |
           # Securely remove key file
           shred -u spark.pem
