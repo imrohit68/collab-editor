@@ -40,3 +40,12 @@ jobs:
           sudo docker rmi imrohit68/collab-editor:latest || true && \
           sudo docker run -d -p 8080:8080 --name collab-editor-container imrohit68/collab-editor:latest"
           
+      - name: Clean Up SSH Key
+        if: always()
+        run: |
+          # Securely remove key file
+          shred -u ~/.ssh/deploy_key
+          # Clear bash history
+          history -c
+          history -w
+          
