@@ -41,8 +41,5 @@ jobs:
           EC2_SSH_PRIVATE_KEY: ${{ env.EC2_SSH_PRIVATE_KEY }}
           EC2_URL: ${{ env.EC2_URL }}
       - name: Deploy Application
-        run: ssh -o StrictHostKeyChecking=no ${{ env.EC2_USERNAME }}@${{ env.EC2_URL }} "
-          sudo docker pull imrohit68/collab-editor:latest && \
-          sudo docker stop collab-editor-container || true && \
-          sudo docker rm collab-editor-container || true && \
-          sudo docker run -d -p 8080:8080 --name collab-editor-container imrohit68/collab-editor:latest"
+        run: ssh -o StrictHostKeyChecking=no ${{ env.EC2_USERNAME }}@${{ env.EC2_URL }} 
+         "sudo docker pull imrohit68/collab-editor:latest"
