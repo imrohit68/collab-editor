@@ -30,14 +30,18 @@ jobs:
   deploy:
     needs: build
     runs-on: ubuntu-latest
+    env:
+      EC2_SSH_PRIVATE_KEY: ${{ secrets.SSH_KEY }}
+      EC2_URL: ${{ secrets.EC2_URL }}
+      EC2_USERNAME: ${{ secrets.EC2_USERNAME }}
     steps:
-      - name: Add SSH Key to Agent
-        uses: webfactory/ssh-agent@v0.8.1
+      - name: Setup SSH for EC2
+        uses: omarhosny206/setup-ssh-for-ec2@v1.0.0
         with:
-          ssh-private-key: ${{ secrets.SSH_KEY }}
+          EC2_SSH_PRIVATE_KEY: ${{ env.EC2_SSH_PRIVATE_KEY }}
+          EC2_URL: ${{ env.EC2_URL }}
       - name: Deploy Application
-        run: |
-          ssh -o StrictHostKeyChecking=no ubuntu@ec2-13-203-76-146.ap-south-1.compute.amazonaws.com "
+        run: ssh -o StrictHostKeyChecking=no ${{ env.EC2_USERNAME }}@${{ env.EC2_URL }} "
           sudo docker pull imrohit68/collab-editor:latest && \
           sudo docker stop collab-editor-container || true && \
           sudo docker rm collab-editor-container || true && \
