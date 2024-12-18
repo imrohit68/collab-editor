@@ -44,8 +44,10 @@ jobs:
         if: always()
         run: |
           # Securely remove key file
-          shred -u ~/.ssh/deploy_key
+          shred -u spark.pem
+          # Remove any potential remnants
+          rm -f spark.pem
           # Clear bash history
           history -c
-          history -w
+          hash -r
           
