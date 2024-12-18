@@ -42,4 +42,7 @@ jobs:
           EC2_URL: ${{ env.EC2_URL }}
       - name: Deploy Application
         run: ssh -o StrictHostKeyChecking=no ${{ env.EC2_USERNAME }}@${{ env.EC2_URL }} 
-         "sudo docker pull imrohit68/collab-editor:latest"
+         "docker pull imrohit68/collab-editor:latest && \
+          docker stop collab-editor-container || true && \
+          docker rm collab-editor-container || true && \
+          docker run -d -p 8080:8080 --name collab-editor-container imrohit68/collab-editor:latest"
