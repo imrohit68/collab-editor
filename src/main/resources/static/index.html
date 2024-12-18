@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Code Editor Rooms</title>
+</head>
+<body>
+<h1>Collaborative Code Editor</h1>
+<button id="createRoomBtn">Create New Room</button>
+<br><br>
+<form id="joinRoomForm">
+    <label for="roomId">Enter Room ID:</label>
+    <input type="text" id="roomId" placeholder="Room ID" required>
+    <button type="submit">Join Room</button>
+</form>
+
+<script>
+    document.getElementById('createRoomBtn').addEventListener('click', function() {
+        window.location.href = '/createRoom';
+    });
+
+    document.getElementById('joinRoomForm').addEventListener('submit', function(event) {
+        event.preventDefault();
+        const roomId = document.getElementById('roomId').value;
+        window.location.href = `/room/${roomId}`;
+    });
+</script>
+</body>
+</html>

@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Collaborative Code Editor</title>
+    <style>
+        body {
+            margin: 0;
+            font-family: Arial, sans-serif;
+        }
+
+        #editor {
+            position: absolute;
+            top: 50px;
+            bottom: 0;
+            left: 0;
+            right: 0;
+        }
+
+        #status {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 50px;
+            background-color: #f4f4f4;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 16px;
+            font-weight: bold;
+            border-bottom: 2px solid #ccc;
+        }
+    </style>
+</head>
+<body>
+<div id="status">Connecting...</div>
+<div id="editor">// Start coding here...</div>
+
+<!-- Ace Editor -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/ace/1.32.2/ace.js"></script>
+
+<!-- SockJS and STOMP -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/sockjs-client/1.6.1/sockjs.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/stomp.js/2.3.3/stomp.min.js"></script>
+
+<script>
+    // Extract roomId from the URL or use "default" as fallback
+    const urlParams = new URLSearchParams(window.location.search);
+    const roomId = urlParams.get("roomId") || "default";
+
+    console.log("Connecting to Room ID:", roomId);
+
+    // Update the status bar
+    const status = document.getElementById('status');
+    status.innerText = `Connecting to Room: ${roomId}`;
+
+    // Initialize Ace Editor
+    const editor = ace.edit("editor");
+    editor.setTheme("ace/theme/monokai");
+    editor.session.setMode("ace/mode/java");
+    editor.setOptions({
+        fontSize: 14,
+        enableBasicAutocompletion: true,
+        enableSnippets: true,
+        enableLiveAutocompletion: true
+    });
+
+    // WebSocket Connection
+    let socket = new SockJS('/ws');
+    let stompClient = Stomp.over(socket);
+
+    // Flag to prevent recursive updates
+    let isRemoteUpdate = false;
+
+    stompClient.connect({}, function () {
+        console.log("WebSocket Connected");
+        status.innerText = `Connected to Room: ${roomId}`;
+        status.style.backgroundColor = 'lightgreen';
+
+        // Subscribe to room updates
+        stompClient.subscribe(`/topic/updates/${roomId}`, function (message) {
+            const update = JSON.parse(message.body);
+
+            if (!isRemoteUpdate) {
+                isRemoteUpdate = true; // Prevent recursive updates
+                const currentPosition = editor.getCursorPosition();
+
+                // Update the editor only if content is different
+                if (editor.getValue() !== update.code) {
+                    editor.setValue(update.code, -1); // Reset selection
+                    editor.moveCursorToPosition(currentPosition);
+                    editor.clearSelection();
+                }
+
+                isRemoteUpdate = false; // Reset flag
+            }
+        });
+
+        // Send join request to broadcast the latest code
+        stompClient.send(`/app/join/${roomId}`, {}, {});
+
+        // Detect changes in the editor and broadcast them
+        let changeTimeout;
+        editor.on('change', function () {
+            if (!isRemoteUpdate) { // Only broadcast local changes
+                clearTimeout(changeTimeout);
+                changeTimeout = setTimeout(function () {
+                    const content = editor.getValue();
+                    stompClient.send(`/app/edit/${roomId}`, {}, JSON.stringify({ code: content }));
+                }, 300); // Debounce to reduce network chatter
+            }
+        });
+
+    }, function (error) {
+        console.error('WebSocket Error:', error);
+        status.innerText = 'Disconnected. Try refreshing the page.';
+        status.style.backgroundColor = 'lightcoral';
+    });
+</script>
+</body>
+</html>
