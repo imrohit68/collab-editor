@@ -8,115 +8,203 @@
         body {
             margin: 0;
             font-family: Arial, sans-serif;
+            background-color: #1e1e1e;
+            color: #fff;
         }
 
         #editor {
             position: absolute;
-            top: 50px;
+            top: 60px;
             bottom: 0;
             left: 0;
             right: 0;
         }
 
-        #status {
+        #toolbar {
             position: fixed;
             top: 0;
             left: 0;
             right: 0;
-            height: 50px;
-            background-color: #f4f4f4;
+            height: 60px;
+            background-color: #2d2d2d;
             display: flex;
             align-items: center;
-            justify-content: center;
-            font-size: 16px;
-            font-weight: bold;
-            border-bottom: 2px solid #ccc;
+            padding: 0 20px;
+            gap: 20px;
+            border-bottom: 1px solid #3d3d3d;
+        }
+
+        #status {
+            padding: 8px 16px;
+            border-radius: 4px;
+            font-size: 14px;
+            background-color: #333;
+        }
+
+        #status.connected {
+            background-color: #2e7d32;
+        }
+
+        #status.disconnected {
+            background-color: #c62828;
+        }
+
+        #room-info {
+            font-size: 14px;
+            color: #bbb;
+        }
+
+        .history-panel {
+            position: fixed;
+            right: 0;
+            top: 60px;
+            bottom: 0;
+            width: 300px;
+            background-color: #2d2d2d;
+            border-left: 1px solid #3d3d3d;
+            padding: 20px;
+            overflow-y: auto;
+            display: none;
+        }
+
+        .history-panel.visible {
+            display: block;
+        }
+
+        .history-item {
+            padding: 10px;
+            background-color: #333;
+            margin-bottom: 10px;
+            border-radius: 4px;
+            font-family: monospace;
+            font-size: 12px;
+            cursor: pointer;
+        }
+
+        .history-item:hover {
+            background-color: #404040;
+        }
+
+        button {
+            padding: 8px 16px;
+            background-color: #404040;
+            border: none;
+            color: white;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+
+        button:hover {
+            background-color: #4a4a4a;
         }
     </style>
 </head>
 <body>
-<div id="status">Connecting...</div>
-<div id="editor">// Start coding here...</div>
+<div id="toolbar">
+    <div id="status">Connecting...</div>
+    <div id="room-info"></div>
+</div>
+<div id="editor"></div>
 
 <!-- Ace Editor -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/ace/1.32.2/ace.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/ace/1.32.2/ext-language_tools.js"></script>
 
 <!-- SockJS and STOMP -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/sockjs-client/1.6.1/sockjs.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/stomp.js/2.3.3/stomp.min.js"></script>
 
 <script>
-    // Extract roomId from the URL or use "default" as fallback
-    const urlParams = new URLSearchParams(window.location.search);
-    const roomId = urlParams.get("roomId") || "default";
-
-    console.log("Connecting to Room ID:", roomId);
-
-    // Update the status bar
+    // Initialize UI elements
     const status = document.getElementById('status');
-    status.innerText = `Connecting to Room: ${roomId}`;
+    const roomInfo = document.getElementById('room-info');
+
+    // Extract roomId from URL
+    const urlParams = new URLSearchParams(window.location.search);
+    const roomId = urlParams.get('roomId') || 'default';
+    roomInfo.textContent = `Room ID: ${roomId}`;
 
     // Initialize Ace Editor
-    const editor = ace.edit("editor");
-    editor.setTheme("ace/theme/monokai");
-    editor.session.setMode("ace/mode/java");
+    const editor = ace.edit('editor');
+    editor.setTheme('ace/theme/monokai');
+    editor.session.setMode('ace/mode/java');
     editor.setOptions({
         fontSize: 14,
         enableBasicAutocompletion: true,
         enableSnippets: true,
-        enableLiveAutocompletion: true
+        enableLiveAutocompletion: true,
+        showPrintMargin: false
     });
 
-    // WebSocket Connection
-    let socket = new SockJS('/ws');
-    let stompClient = Stomp.over(socket);
+    // WebSocket setup
+    const socket = new SockJS('/ws');
+    const stompClient = Stomp.over(socket);
+    stompClient.debug = null; // Disable debug logs
 
-    // Flag to prevent recursive updates
     let isRemoteUpdate = false;
 
-    stompClient.connect({}, function () {
-        console.log("WebSocket Connected");
-        status.innerText = `Connected to Room: ${roomId}`;
-        status.style.backgroundColor = 'lightgreen';
+    // Load the latest code when the user joins
+    async function loadLatestCode() {
+        try {
+            const response = await fetch(`/codeHistory/${roomId}`);
+            const history = await response.json();
+
+            if (history.length > 0) {
+                // Apply the latest code
+                editor.setValue(history[history.length - 1], -1);
+            } else {
+                // No history, ensure the editor is empty
+                editor.setValue('', -1);
+            }
+        } catch (error) {
+            console.error('Failed to load latest code:', error);
+        }
+    }
+
+    // Connect to WebSocket
+    stompClient.connect({}, function() {
+        console.log('Connected to WebSocket');
+        status.textContent = 'Connected';
+        status.classList.add('connected');
 
         // Subscribe to room updates
-        stompClient.subscribe(`/topic/updates/${roomId}`, function (message) {
-            const update = JSON.parse(message.body);
-
+        stompClient.subscribe(`/topic/updates/${roomId}`, function(message) {
             if (!isRemoteUpdate) {
-                isRemoteUpdate = true; // Prevent recursive updates
+                isRemoteUpdate = true;
                 const currentPosition = editor.getCursorPosition();
+                const update = message.body;
 
-                // Update the editor only if content is different
-                if (editor.getValue() !== update.code) {
-                    editor.setValue(update.code, -1); // Reset selection
+                if (editor.getValue() !== update) {
+                    editor.setValue(update, -1);
                     editor.moveCursorToPosition(currentPosition);
                     editor.clearSelection();
                 }
 
-                isRemoteUpdate = false; // Reset flag
+                isRemoteUpdate = false;
             }
         });
 
-        // Send join request to broadcast the latest code
-        stompClient.send(`/app/join/${roomId}`, {}, {});
+        // Load the latest code when user joins
+        loadLatestCode();
 
-        // Detect changes in the editor and broadcast them
+        // Handle editor changes
         let changeTimeout;
-        editor.on('change', function () {
-            if (!isRemoteUpdate) { // Only broadcast local changes
+        editor.on('change', function() {
+            if (!isRemoteUpdate) {
                 clearTimeout(changeTimeout);
-                changeTimeout = setTimeout(function () {
+                changeTimeout = setTimeout(function() {
                     const content = editor.getValue();
-                    stompClient.send(`/app/edit/${roomId}`, {}, JSON.stringify({ code: content }));
-                }, 300); // Debounce to reduce network chatter
+                    if (content.trim() !== '') {
+                        stompClient.send(`/app/edit/${roomId}`, {}, content);  // Send non-empty content
+                    }
+                }, 300);
             }
         });
 
-    }, function (error) {
+    }, function(error) {
         console.error('WebSocket Error:', error);
-        status.innerText = 'Disconnected. Try refreshing the page.';
-        status.style.backgroundColor = 'lightcoral';
+        status.textContent = 'Disconnected';
+        status.classList.add('disconnected');
     });
 </script>
 </body>

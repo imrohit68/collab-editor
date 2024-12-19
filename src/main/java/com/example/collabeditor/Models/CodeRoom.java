@@ -2,18 +2,21 @@ package com.example.collabeditor.Models;
 
 import lombok.Getter;
 
+import java.util.ArrayList;
+import java.util.List;
+
 public class CodeRoom {
-    private String code;
+    private List<String> code;
 
-    public CodeRoom(String code) {
+    public CodeRoom(List<String> code) {
         this.code = code;
     }
 
-    public void setCode(String code) {
+    public void setCode(List<String> code) {
         this.code = code;
     }
 
-    public String getCode() {
+    public List<String> getCode() {
         return code;
     }
 
