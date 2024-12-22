@@ -17,26 +17,50 @@ import java.util.concurrent.ConcurrentHashMap;
 
 @RestController
 public class CodeEditorController {
-    private final ConcurrentHashMap<String, CodeRoom> roomCodeMap = new ConcurrentHashMap<>();
+    private final ConcurrentHashMap<String, List<String>> roomCodeMap = new ConcurrentHashMap<>();
+    private final ConcurrentHashMap<String, List<String>> roomDrawingMap = new ConcurrentHashMap<>();
 
     @MessageMapping("/edit/{roomId}")
     @SendTo("/topic/updates/{roomId}")
     public String handleCodeEdit(@Payload String update, @DestinationVariable String roomId) {
-        if(roomCodeMap.containsKey(roomId)) roomCodeMap.get(roomId).getCode().add(update);
+        if(roomCodeMap.containsKey(roomId)) roomCodeMap.get(roomId).add(update);
         else {
             List<String> code = new ArrayList<>();
             code.add(update);
-            roomCodeMap.put(roomId,new CodeRoom(code));
+            roomCodeMap.put(roomId,code);
         }
         return update;
     }
     @GetMapping("/codeHistory/{roomId}")
     public ResponseEntity<List<String>> getCodeHistory(@PathVariable String roomId) {
         if(roomCodeMap.containsKey(roomId)){
-            List<String> code = roomCodeMap.get(roomId).getCode();
+            List<String> code = roomCodeMap.get(roomId);
             return ResponseEntity.ok(code);
         }else return ResponseEntity.noContent().build();
 
+    }
+    @MessageMapping("/draw/{roomId}")
+    @SendTo("/topic/drawUpdates/{roomId}")
+    public String handleDrawingUpdate(@Payload String update, @DestinationVariable String roomId) {
+        if (roomDrawingMap.containsKey(roomId)) {
+            roomDrawingMap.get(roomId).add(update);
+        } else {
+            List<String> code = new ArrayList<>();
+            List<String> drawingActions = new ArrayList<>();
+            drawingActions.add(update);
+            roomDrawingMap.put(roomId,drawingActions);
+        }
+        return update;
+    }
+
+    @GetMapping("/drawingHistory/{roomId}")
+    public ResponseEntity<List<String>> getDrawingHistory(@PathVariable String roomId) {
+        if (roomDrawingMap.containsKey(roomId)) {
+            List<String> drawingActions = roomDrawingMap.get(roomId);
+            return ResponseEntity.ok(drawingActions);
+        } else {
+            return ResponseEntity.noContent().build();
+        }
     }
     @GetMapping("/roomExists/{roodId}")
     public ResponseEntity<Boolean> checkRoom(@PathVariable String roodId){

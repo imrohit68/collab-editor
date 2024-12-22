@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Collaborative Code Editor</title>
+    <title>Collaborative Code Editor with Canvas</title>
     <style>
         body {
             margin: 0;
@@ -12,12 +12,33 @@
             color: #fff;
         }
 
-        #editor {
+        .split-container {
             position: absolute;
             top: 60px;
             bottom: 0;
             left: 0;
             right: 0;
+            display: flex;
+        }
+
+        .editor-container, .canvas-container {
+            flex: 1;
+            position: relative;
+            height: 100%;
+            border-right: 1px solid #3d3d3d;
+        }
+
+        #editor {
+            position: absolute;
+            top: 0;
+            bottom: 0;
+            left: 0;
+            right: 0;
+        }
+
+        #canvas {
+            background-color: #fff;
+            cursor: crosshair;
         }
 
         #toolbar {
@@ -32,6 +53,19 @@
             padding: 0 20px;
             gap: 20px;
             border-bottom: 1px solid #3d3d3d;
+            z-index: 1000;
+        }
+
+        #drawing-toolbar {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            display: flex;
+            gap: 10px;
+            background-color: rgba(45, 45, 45, 0.9);
+            padding: 10px;
+            border-radius: 4px;
+            z-index: 100;
         }
 
         #status {
@@ -54,37 +88,6 @@
             color: #bbb;
         }
 
-        .history-panel {
-            position: fixed;
-            right: 0;
-            top: 60px;
-            bottom: 0;
-            width: 300px;
-            background-color: #2d2d2d;
-            border-left: 1px solid #3d3d3d;
-            padding: 20px;
-            overflow-y: auto;
-            display: none;
-        }
-
-        .history-panel.visible {
-            display: block;
-        }
-
-        .history-item {
-            padding: 10px;
-            background-color: #333;
-            margin-bottom: 10px;
-            border-radius: 4px;
-            font-family: monospace;
-            font-size: 12px;
-            cursor: pointer;
-        }
-
-        .history-item:hover {
-            background-color: #404040;
-        }
-
         button {
             padding: 8px 16px;
             background-color: #404040;
@@ -97,14 +100,46 @@
         button:hover {
             background-color: #4a4a4a;
         }
+
+        button.active {
+            background-color: #2e7d32;
+        }
+
+        input[type="color"] {
+            width: 40px;
+            height: 40px;
+            padding: 0;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+
+        input[type="range"] {
+            width: 100px;
+        }
     </style>
 </head>
 <body>
 <div id="toolbar">
     <div id="status">Connecting...</div>
     <div id="room-info"></div>
+    <button id="clear-canvas">Clear Canvas</button>
 </div>
-<div id="editor"></div>
+
+<div class="split-container">
+    <div class="editor-container">
+        <div id="editor"></div>
+    </div>
+    <div class="canvas-container">
+        <div id="drawing-toolbar">
+            <input type="color" id="color-picker" value="#000000">
+            <input type="range" id="brush-size" min="1" max="20" value="2">
+            <button id="pen-tool" class="active">Pen</button>
+            <button id="eraser-tool">Eraser</button>
+        </div>
+        <canvas id="canvas"></canvas>
+    </div>
+</div>
 
 <!-- Ace Editor -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/ace/1.32.2/ace.js"></script>
@@ -118,11 +153,113 @@
     // Initialize UI elements
     const status = document.getElementById('status');
     const roomInfo = document.getElementById('room-info');
+    const canvas = document.getElementById('canvas');
+    const ctx = canvas.getContext('2d');
+    const colorPicker = document.getElementById('color-picker');
+    const brushSize = document.getElementById('brush-size');
+    const penTool = document.getElementById('pen-tool');
+    const eraserTool = document.getElementById('eraser-tool');
+    const clearCanvasBtn = document.getElementById('clear-canvas');
 
     // Extract roomId from URL
     const urlParams = new URLSearchParams(window.location.search);
     const roomId = urlParams.get('roomId') || 'default';
     roomInfo.textContent = `Room ID: ${roomId}`;
+
+    // Canvas setup
+    function resizeCanvas() {
+        const container = canvas.parentElement;
+        canvas.width = container.clientWidth;
+        canvas.height = container.clientHeight;
+    }
+
+    window.addEventListener('resize', resizeCanvas);
+    resizeCanvas();
+
+    // Drawing state
+    let isDrawing = false;
+    let currentTool = 'pen';
+
+    // Drawing functions
+    function startDrawing(e) {
+        isDrawing = true;
+        const rect = canvas.getBoundingClientRect();
+        const x = e.clientX - rect.left;
+        const y = e.clientY - rect.top;
+
+        ctx.beginPath();
+        ctx.moveTo(x, y);
+
+        // Send initial position
+        const drawAction = {
+            type: currentTool,
+            x: x,
+            y: y,
+            color: currentTool === 'eraser' ? '#ffffff' : colorPicker.value,
+            size: brushSize.value,
+            isStarting: true
+        };
+        stompClient.send(`/app/draw/${roomId}`, {}, JSON.stringify(drawAction));
+    }
+
+    function stopDrawing() {
+        isDrawing = false;
+        ctx.beginPath();
+    }
+
+    function draw(e) {
+        if (!isDrawing) return;
+
+        const rect = canvas.getBoundingClientRect();
+        const x = e.clientX - rect.left;
+        const y = e.clientY - rect.top;
+
+        ctx.lineCap = 'round';
+        ctx.lineJoin = 'round';
+        ctx.lineWidth = brushSize.value;
+        ctx.strokeStyle = currentTool === 'eraser' ? '#ffffff' : colorPicker.value;
+
+        ctx.lineTo(x, y);
+        ctx.stroke();
+
+        // Send drawing action
+        const drawAction = {
+            type: currentTool,
+            x: x,
+            y: y,
+            color: ctx.strokeStyle,
+            size: ctx.lineWidth,
+            isStarting: false
+        };
+
+        stompClient.send(`/app/draw/${roomId}`, {}, JSON.stringify(drawAction));
+    }
+
+    // Tool selection
+    penTool.addEventListener('click', () => {
+        currentTool = 'pen';
+        penTool.classList.add('active');
+        eraserTool.classList.remove('active');
+    });
+
+    eraserTool.addEventListener('click', () => {
+        currentTool = 'eraser';
+        eraserTool.classList.add('active');
+        penTool.classList.remove('active');
+    });
+
+    clearCanvasBtn.addEventListener('click', () => {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        stompClient.send(`/app/draw/${roomId}`, {}, JSON.stringify({
+            type: 'clear'
+        }));
+    });
+
+    // Canvas event listeners
+    canvas.addEventListener('mousedown', startDrawing);
+    canvas.addEventListener('mousemove', draw);
+    canvas.addEventListener('mouseup', stopDrawing);
+    canvas.addEventListener('mouseout', stopDrawing);
 
     // Initialize Ace Editor
     const editor = ace.edit('editor');
@@ -143,21 +280,45 @@
 
     let isRemoteUpdate = false;
 
-    // Load the latest code when the user joins
-    async function loadLatestCode() {
+    // Load the latest code and drawing when the user joins
+    async function loadLatestContent() {
         try {
-            const response = await fetch(`/codeHistory/${roomId}`);
-            const history = await response.json();
-
-            if (history.length > 0) {
-                // Apply the latest code
-                editor.setValue(history[history.length - 1], -1);
-            } else {
-                // No history, ensure the editor is empty
-                editor.setValue('', -1);
+            // Load code (remains the same)
+            const codeResponse = await fetch(`/codeHistory/${roomId}`);
+            const codeHistory = await codeResponse.json();
+            if (codeHistory.length > 0) {
+                editor.setValue(codeHistory[codeHistory.length - 1], -1);
             }
+
+            // Load drawing with improved replay
+            const drawingResponse = await fetch(`/drawingHistory/${roomId}`);
+            const drawingHistory = await drawingResponse.json();
+
+            let isNewPath = true;
+            // Replay drawing actions
+            drawingHistory.forEach(action => {
+                const drawAction = JSON.parse(action);
+                if (drawAction.type === 'clear') {
+                    ctx.clearRect(0, 0, canvas.width, canvas.height);
+                    isNewPath = true;
+                } else {
+                    if (isNewPath || drawAction.isStarting) {
+                        ctx.beginPath();
+                        ctx.moveTo(drawAction.x, drawAction.y);
+                        isNewPath = false;
+                    } else {
+                        ctx.lineTo(drawAction.x, drawAction.y);
+                    }
+
+                    ctx.lineCap = 'round';
+                    ctx.lineJoin = 'round';
+                    ctx.lineWidth = drawAction.size;
+                    ctx.strokeStyle = drawAction.color;
+                    ctx.stroke();
+                }
+            });
         } catch (error) {
-            console.error('Failed to load latest code:', error);
+            console.error('Failed to load content:', error);
         }
     }
 
@@ -167,7 +328,7 @@
         status.textContent = 'Connected';
         status.classList.add('connected');
 
-        // Subscribe to room updates
+        // Subscribe to code updates
         stompClient.subscribe(`/topic/updates/${roomId}`, function(message) {
             if (!isRemoteUpdate) {
                 isRemoteUpdate = true;
@@ -184,8 +345,30 @@
             }
         });
 
-        // Load the latest code when user joins
-        loadLatestCode();
+        // Subscribe to drawing updates
+        stompClient.subscribe(`/topic/drawUpdates/${roomId}`, function(message) {
+            const drawAction = JSON.parse(message.body);
+
+            if (drawAction.type === 'clear') {
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+            } else {
+                if (drawAction.isStarting) {
+                    ctx.beginPath();
+                    ctx.moveTo(drawAction.x, drawAction.y);
+                } else {
+                    ctx.lineTo(drawAction.x, drawAction.y);
+                }
+
+                ctx.lineCap = 'round';
+                ctx.lineJoin = 'round';
+                ctx.lineWidth = drawAction.size;
+                ctx.strokeStyle = drawAction.color;
+                ctx.stroke();
+            }
+        });
+
+        // Load the latest content when user joins
+        loadLatestContent();
 
         // Handle editor changes
         let changeTimeout;
@@ -195,7 +378,7 @@
                 changeTimeout = setTimeout(function() {
                     const content = editor.getValue();
                     if (content.trim() !== '') {
-                        stompClient.send(`/app/edit/${roomId}`, {}, content);  // Send non-empty content
+                        stompClient.send(`/app/edit/${roomId}`, {}, content);
                     }
                 }, 300);
             }
