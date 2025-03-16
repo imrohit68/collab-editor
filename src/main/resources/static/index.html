@@ -3,10 +3,12 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Collaborative Code Editor Rooms</title>
+    <title>Collaborative Code Editor</title>
+    <script src="https://kit.fontawesome.com/a076d05399.js" crossorigin="anonymous"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css" rel="stylesheet">
     <style>
         body {
-            font-family: Arial, sans-serif;
+            font-family: 'Poppins', sans-serif;
             background-color: #f4f4f9;
             color: #333;
             text-align: center;
@@ -15,7 +17,8 @@
         }
 
         h1 {
-            color: #333;
+            color: #007bff;
+            font-size: 2rem;
         }
 
         .container {
@@ -23,7 +26,42 @@
             flex-direction: column;
             align-items: center;
             justify-content: center;
-            margin-top: 50px;
+            margin-top: 20px;
+        }
+
+        .info-box {
+            max-width: 600px;
+            text-align: left;
+            font-size: 16px;
+            background-color: #fff;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 0 15px rgba(0, 0, 0, 0.1);
+            margin-bottom: 20px;
+        }
+
+        h2 {
+            text-align: center;
+            color: #444;
+            font-size: 1.5rem;
+        }
+
+        ul {
+            padding: 0;
+            list-style: none;
+        }
+
+        ul li {
+            margin: 10px 0;
+            font-size: 1rem;
+            display: flex;
+            align-items: center;
+        }
+
+        ul li i {
+            color: #007bff;
+            margin-right: 10px;
+            font-size: 1.2rem;
         }
 
         #joinRoomForm {
@@ -31,25 +69,36 @@
             display: flex;
             flex-direction: column;
             align-items: center;
+            background: #fff;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 0 15px rgba(0, 0, 0, 0.1);
+            width: 350px;
+        }
+
+        #joinRoomForm label {
+            margin-bottom: 10px; /* Added margin for spacing */
+            font-size: 16px;
         }
 
         #roomId {
-            padding: 8px;
+            padding: 10px;
             font-size: 16px;
-            width: 250px;
+            width: 100%;
             margin-bottom: 15px;
             border: 1px solid #ccc;
             border-radius: 4px;
         }
 
         button {
-            padding: 10px 20px;
+            padding: 12px 20px;
             background-color: #007bff;
             color: white;
             border: none;
             border-radius: 4px;
             cursor: pointer;
             font-size: 16px;
+            width: 100%;
         }
 
         button:hover {
@@ -57,13 +106,13 @@
         }
 
         #errorMessage {
-            margin-top: 20px;
+            margin-top: 15px;
             color: #e74c3c;
             font-size: 16px;
         }
 
         .room-actions {
-            margin-top: 30px;
+            margin-top: 20px;
         }
 
     </style>
@@ -71,16 +120,27 @@
 <body>
 
 <div class="container">
-    <h1>Collaborative Code Editor</h1>
+    <h1><i class="fas fa-code"></i> Collaborative Code Editor</h1>
+
+    <div class="info-box">
+        <h2>What This Project Does</h2>
+        <ul>
+            <li><i class="fas fa-users"></i> Real-time code editing with multiple users.</li>
+            <li><i class="fas fa-link"></i> Share a room link and collaborate instantly.</li>
+            <li><i class="fas fa-bolt"></i> No installations needed, works directly in the browser.</li>
+            <li><i class="fas fa-lock"></i> Secure and private code-sharing environment.</li>
+            <li><i class="fas fa-globe"></i> Accessible from anywhere in the world.</li>
+        </ul>
+    </div>
 
     <div class="room-actions">
-        <button id="createRoomBtn">Create New Room</button>
+        <button id="createRoomBtn"><i class="fas fa-plus-circle"></i> Create New Room</button>
     </div>
 
     <form id="joinRoomForm">
-        <label for="roomId">Enter Room ID:</label>
+        <label for="roomId"><strong>Enter Room ID:</strong></label>
         <input type="text" id="roomId" placeholder="Room ID" required>
-        <button type="submit">Join Room</button>
+        <button type="submit"><i class="fas fa-sign-in-alt"></i> Join Room</button>
     </form>
 
     <div id="errorMessage"></div>

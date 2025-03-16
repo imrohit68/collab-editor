@@ -1,6 +1,5 @@
 package com.example.collabeditor.Controller;
 
-import com.example.collabeditor.Models.CodeRoom;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.messaging.handler.annotation.DestinationVariable;
@@ -17,8 +16,8 @@ import java.util.concurrent.ConcurrentHashMap;
 
 @RestController
 public class CodeEditorController {
-    private final ConcurrentHashMap<String, List<String>> roomCodeMap = new ConcurrentHashMap<>();
-    private final ConcurrentHashMap<String, List<String>> roomDrawingMap = new ConcurrentHashMap<>();
+    public static final ConcurrentHashMap<String, List<String>> roomCodeMap = new ConcurrentHashMap<>();
+    public static final ConcurrentHashMap<String, List<String>> roomDrawingMap = new ConcurrentHashMap<>();
 
     @MessageMapping("/edit/{roomId}")
     @SendTo("/topic/updates/{roomId}")
@@ -66,5 +65,9 @@ public class CodeEditorController {
     public ResponseEntity<Boolean> checkRoom(@PathVariable String roodId){
         if(roomCodeMap.containsKey(roodId)) return ResponseEntity.ok(true);
         else return new ResponseEntity<>(false, HttpStatus.BAD_REQUEST);
+    }
+    @GetMapping("/ping")
+    public ResponseEntity<String> ping(){
+        return ResponseEntity.ok("pong");
     }
 }
