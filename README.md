@@ -37,9 +37,3 @@ The project can be enhanced with:
 - **Backend:** Spring Boot, WebSockets  
 - **Frontend:** HTML, CSS, JavaScript, FontAwesome  
 - **Hosting:** Render  
-
-
-### **1️⃣ Clone the Repository**  
-```sh
-git clone https://github.com/your-username/collab-editor.git
-cd collab-editor
