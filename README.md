@@ -8,10 +8,9 @@ A real-time **Collaborative Code Editor** that allows multiple users to write an
 
 ## 📌 **Project Overview**  
 This project enables seamless **real-time coding collaboration** with multiple users in a shared environment. It is built using **Spring Boot** for the backend and **WebSockets** for real-time updates.
-
-🔗 **Live Link:** [collab-editor-o9od.onrender.com](https://collab-editor-o9od.onrender.com/)  
+ 
 📸 **Screenshot:**  
-![Project Screenshot](https://github.com/imrohit68/project-images/blob/main/youtube-tracker.png)  
+![Project Screenshot](https://github.com/imrohit68/project-images/blob/main/collab-editor.png)  
 
 ---
 
@@ -39,10 +38,6 @@ The project can be enhanced with:
 - **Frontend:** HTML, CSS, JavaScript, FontAwesome  
 - **Hosting:** Render  
 
----
-
-## 🔧 **How to Run Locally**  
-Follow these steps to set up the project on your local machine:
 
 ### **1️⃣ Clone the Repository**  
 ```sh
